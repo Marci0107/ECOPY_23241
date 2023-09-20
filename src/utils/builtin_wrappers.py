@@ -142,5 +142,29 @@ return {'even': even_numbers, 'odd': odd_numbers}
 # bemeneti paraméterek: input_dict
 # kimeneti típus: Dict
 def mean_by_key_value(input_dict):
-        result = {}
-        for key, value in input_dict.items():
+    dummydict = dict()
+    for i in input_dict:
+        if len(input_dict[i]) < 2:
+            dummydict[i] = input_dict[i][0]
+        else:
+            dummydict[i] = sum(input_dict[i]) / len(input_dict[i])
+
+    return dummydict
+# 11., Írjon egy függvényt amely a bemeneti lista értékeinek előállítja a gyakoriságát
+# függvény név: count_frequency
+# bemeneti paraméterek: input_list
+# kimeneti típus: Dict
+def count_frequency(input_list):
+    # Initialize an empty dictionary to store the frequencies
+    frequency_dict = {}
+
+    # Iterate through the elements in the input list
+    for item in input_list:
+        # If the item is not in the dictionary, add it with a count of 1
+        if item not in frequency_dict:
+            frequency_dict[item] = 1
+        else:
+            # If the item is already in the dictionary, increment its count
+            frequency_dict[item] += 1
+
+    return frequency_dict
