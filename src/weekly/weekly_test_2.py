@@ -11,9 +11,8 @@ class LaplaceDistribution():
 
     def pdf(self, x):
         prefactor = 1 / (2 * self.scale)
-        exponent = -abs(x - self.loc) / self.scale
+        exponent = -(abs(x - self.loc) / self.scale)
         probability_density = prefactor * math.exp(exponent)
-
         return probability_density
 
     def cdf(self, x):
@@ -23,12 +22,12 @@ class LaplaceDistribution():
             cumulative_probability = 1 - 0.5 * math.exp(-(x - self.loc) / self.scale)
 
         return cumulative_probability
-    def pdf(self, p):
+
+    def ppf(self, p):
         if p < 0.5:
             x = self.loc + self.scale * math.log(2 * p)
         else:
             x = self.loc - self.scale * math.log(2 - 2 * p)
-
         return x
 
     def gen_rand(self):
@@ -39,12 +38,13 @@ class LaplaceDistribution():
             x = self.loc - self.scale * math.log(2 - 2 * u)
 
         return x
+
     def mean(self):
         expected_value = self.loc
         return expected_value
 
     def variance(self):
-        return self.scale
+        return 2 * self.scale ** 2
 
     def skewness(self):
         return 0
@@ -55,61 +55,74 @@ class LaplaceDistribution():
     def mvsk(self):
         return [self.loc, 2 * self.scale ** 2, 0, 3]
 
+
 class ParetoDistribution():
-        def __init__(self, rand, scale, shape):
-            self.rand = rand
-            self.scale = scale
-            self.shape = shape
+    def __init__(self, rand, scale, shape):
+        self.rand = rand
+        self.scale = scale
+        self.shape = shape
 
-        def pdf(self, x):
-            if x >= self.scale:
-                probability_density = (self.shape * self.scale ** self.shape) / (x ** (self.shape + 1))
-            else:
-                probability_density = 0
+    def pdf(self, x):
+        if x >= self.scale:
+            probability_density = (self.shape * self.scale ** self.shape) / (x ** (self.shape + 1))
+        else:
+            probability_density = 0
 
-            return probability_density
+        return probability_density
 
-        def cdf(self, x):
-            if x >= self.scale:
-                cumulative_probability = 1 - (self.scale / x) ** self.shape
-            else:
-                cumulative_probability = 0
+    def cdf(self, x):
+        if x >= self.scale:
+            cumulative_probability = 1 - (self.scale / x) ** self.shape
+        else:
+            cumulative_probability = 0
 
-            return cumulative_probability
-        def ppf(self, p):
-            if 0 <= p < 1:
-                quantile = self.scale / (1 - p) ** (1 / self.shape)
-            else:
-                raise ValueError("Az inverz kumulatív eloszlásfüggvény csak 0 és 1 közötti valószámokra értelmezett.")
+        return cumulative_probability
 
-            return quantile
+    def ppf(self, p):
+        if 0 <= p < 1:
+            quantile = self.scale / (1 - p) ** (1 / self.shape)
+        else:
+            raise ValueError("Az inverz kumulatív eloszlásfüggvény csak 0 és 1 közötti valószámokra értelmezett.")
 
-        def gen_rand(self):
-            random_numbers = np.random.pareto(self.shape) * self.scale
-            return random_numbers
+        return quantile
 
-        def mean(self):
-            if self.shape > 1:
-                expected_value = (self.shape * self.scale) / (self.shape - 1)
-                return expected_value
-            else:
-                raise Exception("Moment undefined")
+    def gen_rand(self):
+        if self.shape <= 0:
+            raise ValueError("Az alak paraméternek pozitívnak kell lennie.")
+        u = self.rand.random()
+        return self.scale / (u ** (1 / self.shape))
 
-        def variance(self):
-            if self.shape > 2:
-                variance = (self.scale ** 2 * self.shape) / ((self.shape - 1) ** 2 * (self.shape - 2))
-                return variance
-            else:
-                raise Exception("Moment undefined")
-
-        def skewness(self):
-            if self.shape > 2:
-                variance = (self.scale ** 2 * self.shape) / ((self.shape - 1) ** 2 * (self.shape - 2))
-                return variance
-            else:
-                raise Exception("Moment undefined")
-
-        def ex_kurtosis(self):
+    def mean(self):
+        if self.shape > 1:
+            expected_value = (self.shape * self.scale) / (self.shape - 1)
+            return expected_value
+        else:
             raise Exception("Moment undefined")
 
+    def variance(self):
+        if self.shape > 2:
+            variance = (self.scale ** 2 * self.shape) / ((self.shape - 1) ** 2 * (self.shape - 2))
+            return variance
+        else:
+            raise Exception("Moment undefined")
 
+    def skewness(self):
+        if self.shape > 3:
+            skewness = ((2 * (1 + self.shape)) / (self.shape - 3)) * (((self.shape - 2) / self.shape) ** 0.5)
+            return skewness
+        else:
+            raise Exception("Moment undefined")
+
+    def ex_kurtosis(self):
+        if self.shape > 4:
+            ex_kurtosis = (6 * (self.shape ** 3 + self.shape ** 2 - 6 * self.shape - 2)) / (self.shape * (self.shape - 3) * (self.shape - 4))
+            return ex_kurtosis
+        else:
+            raise Exception("Moment undefined")
+
+    def mvsk(self):
+        expected_value = (self.shape * self.scale) / (self.shape - 1)
+        variance = (self.scale ** 2 * self.shape) / ((self.shape - 1) ** 2 * (self.shape - 2))
+        skewness = ((2 * (1 + self.shape)) / (self.shape - 3)) * (((self.shape - 2) / self.shape) ** 0.5)
+        ex_kurtosis = (6 * (self.shape ** 3 + self.shape ** 2 - 6 * self.shape - 2)) / (self.shape * (self.shape - 3) * (self.shape - 4))
+        return [expected_value, variance, skewness, ex_kurtosis]

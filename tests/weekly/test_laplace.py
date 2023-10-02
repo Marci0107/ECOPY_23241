@@ -53,7 +53,7 @@ def test_cdf():
     assert result == approx(expected)
 
 
-def test_pdf():
+def test_ppf():
     # Arrange
     location = 2
     scale = 7
@@ -63,7 +63,7 @@ def test_pdf():
 
     # Act
     dist = wt.LaplaceDistribution(rand_gen, location, scale)
-    result = dist.pdf(test_value)
+    result = dist.ppf(test_value)
 
     # Assert
     assert result == approx(expected)
