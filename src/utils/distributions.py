@@ -1,6 +1,7 @@
 import random
 import math
 import pyerf
+import scipy
 
 class UniformDistribution():
     def __init__(self, rand, a, b):
@@ -138,3 +139,119 @@ class CauchyDistribution:
 
     def mvsk(self):
         return [self.mean(), self.median(), self.skewness(), self.ex_kurtosis()]
+
+class LogisticDistribution:
+    def __init__(self, rand, location, scale):
+        self.rand = rand
+        self.location = location
+        self.scale = scale
+
+    def pdf(self, x):
+        if self.scale <= 0:
+            raise ValueError("A szórás (scale) értéke pozitívnak kell lennie.")
+
+        diff = x - self.location
+        exponent = -diff / (2 * self.scale)
+        sech_squared = 1 / (math.cosh(exponent) ** 2)
+        pdf_value = sech_squared / (4 * self.scale)
+
+        return pdf_value
+
+    def cdf(self, x):
+        if self.scale <= 0:
+            raise ValueError("A szórás (scale) értéke pozitívnak kell lennie.")
+
+        exponent = -(x - self.location) / self.scale
+        cdf_value = 1 / (1 + math.exp(exponent))
+
+        return cdf_value
+
+    def ppf(self, p):
+        if p < 0 or p > 1:
+            raise ValueError("A valószínűségi érték (p) 0 és 1 között kell legyen.")
+
+        if self.scale <= 0:
+            raise ValueError("A szórás (scale) értéke pozitívnak kell lennie.")
+
+        x = self.location - self.scale * math.log(1 / p - 1)
+        return x
+
+    def gen_rand(self):
+        if self.scale <= 0:
+            raise ValueError("A szórás (scale) értéke pozitívnak kell lennie.")
+
+        u = self.rand.random()
+        x = self.location - self.scale * math.log(1 / u - 1)
+
+        return x
+
+    def mean(self):
+        return self.location
+
+    def variance(self):
+        return self.scale ** 2 * math.pi ** 2 / 3
+
+    def skewness(self):
+        return 0
+
+    def ex_kurtosis(self):
+        return 6 / 5
+
+    def mvsk(self):
+        variance = self.scale ** 2 * math.pi ** 2 / 3
+        return [self.location, variance, 0, 6 / 5]
+
+class ChiSquaredDistribution():
+    def __init__(self, rand, dof):
+        self.rand = rand
+        self.dof = dof
+
+    def pdf(self, x):
+        if x < 0:
+            return 0
+
+        k = self.dof
+        prefactor = 1 / (math.pow(2, k / 2) * scipy.special.gamma(k / 2))
+        pdf_value = prefactor * math.pow(x, (k / 2) - 1) * math.exp(-x / 2)
+
+        return pdf_value
+
+    def cdf(self, x):
+        if x < 0:
+            return 0
+
+        k = self.dof
+        cdf_value = scipy.special.gammainc(k / 2, x / 2)
+
+        return cdf_value
+
+    def ppf(self, p):
+        if p < 0 or p > 1:
+            raise ValueError("A valószínűségi érték (p) 0 és 1 között kell legyen.")
+
+        k = self.dof
+        ppf_value = scipy.stats.chi2.ppf(p, k)
+
+        return ppf_value
+
+    def gen_rand(self):
+        seed = int(self.rand.random() * 1000000)
+        random_value = scipy.stats.chi2.rvs(self.dof)
+        return random_value
+    def mean(self):
+        return self.dof
+
+    def variance(self):
+        return 2 * self.dof
+
+    def skewness(self):
+        return (8 / self.dof) ** 0.5
+
+    def ex_kurtosis(self):
+        return 12 / self.dof
+
+    def mvsk(self):
+        return [self.dof, 2 * self.dof, (8 / self.dof) ** 0.5, 12 / self.dof]
+
+
+
