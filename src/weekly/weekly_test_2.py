@@ -87,38 +87,37 @@ class ParetoDistribution():
         return quantile
 
     def gen_rand(self):
-        if self.scale <= 0 or self.shape <= 0:
-            raise ValueError
-        random_numbers = self.scale * (self.rand.random() ** (-1 / self.shape))
+        u = self.rand.random()
+        random_numbers = self.scale / (1 - u) ** (1 / self.shape)
         return random_numbers
 
     def mean(self):
         if self.shape > 1:
-            expected_value = self.shape / (self.shape - 1)
+            expected_value = (self.shape * self.scale) / (self.shape - 1)
             return expected_value
         else:
-            raise Exception("Moment undefined")
+            float('inf')
 
     def variance(self):
         if self.shape > 2:
-            variance = self.shape / ((self.shape - 1) ** 2 * (self.shape - 2))
+            variance = (self.scale ** 2 * self.shape) / ((self.shape - 1) ** 2 * (self.shape - 2))
             return variance
         else:
-            raise Exception("Moment undefined")
+            float('inf')
 
     def skewness(self):
         if self.shape > 3:
-            skewness = ((2 * (1 + self.shape)) / (self.shape - 3)) * ((1 - 2 / self.shape) ** 0.5)
+            skewness = ((2 * (1 + self.shape)) / (self.shape - 3)) * (((self.shape - 2) / self.shape) ** 0.5)
             return skewness
         else:
-            raise Exception("Moment undefined")
+            float('inf')
 
     def ex_kurtosis(self):
         if self.shape > 4:
-            ex_kurtosis = (6 * (self.shape ** 3 + self.shape ** 2 - 6 * self.shape - 1)) / (self.shape * (self.shape - 3) * (self.shape - 4))
+            ex_kurtosis = (6 * (self.shape ** 3 + self.shape ** 2 - 6 * self.shape - 2)) / (self.shape * (self.shape - 3) * (self.shape - 4))
             return ex_kurtosis
         else:
-            raise Exception("Moment undefined")
+            float('inf')
 
     def mvsk(self):
         expected_value = (self.shape * self.scale) / (self.shape - 1)
