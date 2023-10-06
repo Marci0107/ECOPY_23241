@@ -226,18 +226,14 @@ class ChiSquaredDistribution():
         return cdf_value
 
     def ppf(self, p):
-        if p < 0 or p > 1:
-            raise ValueError("A valószínűségi érték (p) 0 és 1 között kell legyen.")
-
-        k = self.dof
-        ppf_value = scipy.stats.chi2.ppf(p, k)
-
+        ppf_value = 2 * scipy.special.gammaincinv(self.dof / 2, p)
         return ppf_value
 
     def gen_rand(self):
-        seed = int(self.rand.random() * 1000000)
-        random_value = scipy.stats.chi2.rvs(self.dof)
-        return random_value
+        u = self.rand.random()
+        x = 2 * scipy.special.gammaincinv(self.dof / 2, u)
+        return x
+
     def mean(self):
         return self.dof
 
