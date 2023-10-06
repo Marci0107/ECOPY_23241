@@ -252,6 +252,3 @@ class ChiSquaredDistribution():
 
     def mvsk(self):
         return [self.dof, 2 * self.dof, (8 / self.dof) ** 0.5, 12 / self.dof]
-
-
-
