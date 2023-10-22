@@ -40,7 +40,7 @@ def items_starting_with_s(input_df):
     new_df = input_df.copy()
     selected_items = new_df[new_df['item_name'].str.startswith('S')]
     unique_selected_items_df = selected_items.drop_duplicates(subset=["item_name"])
-    return unique_selected_items_df[["item_name"]]
+    return unique_selected_items_df["item_name"].reset_index(drop=True)
 
 def first_three_columns(input_df):
     new_df = input_df.copy()
@@ -49,7 +49,7 @@ def first_three_columns(input_df):
 
 def every_column_except_last_two(input_df):
     new_df = input_df.copy()
-    remaining_columns = new_df.iloc[:, :-3]
+    remaining_columns = new_df.iloc[:, :-2]
     return remaining_columns
 
 def sliced_view(input_df, columns_to_keep, column_to_filter, rows_to_keep):
@@ -60,10 +60,10 @@ def sliced_view(input_df, columns_to_keep, column_to_filter, rows_to_keep):
 
 def generate_quartile(input_df):
     new_df = input_df.copy()
-    new_df['Quartile'] = pd.cut(new_df['item_price'], [0, 10, 20, 30, float('inf')], labels=['low-cost', 'medium-cost', 'high-cost', 'premium'])
+    new_df['Quartile'] = pd.cut(input_df['item_price'], [-1, 10, 20, 30, float('inf')], labels=['low-cost', 'medium-cost', 'high-cost', 'premium'], right=False).astype('object')
     return new_df
 
 def average_price_in_quartiles(input_df):
     new_df = input_df.copy()
-    avg_price_df = new_df.groupby('Quartile')['item_price'].mean().reset_index()
-    return avg_price_df[2]
+    avg_price_df = new_df.groupby('Quartile')['item_price'].mean().reset_index(drop=True)
+    return avg_price_df
