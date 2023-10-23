@@ -6,7 +6,7 @@ import src.weekly.weekly_test_5 as wt
 from pandas.testing import assert_frame_equal, assert_series_equal
 from pytest import approx
 
-from src.utils.distributions import UniformDistribution, LogisticDistribution, CauchyDistribution, \
+from src.weekly.distributions import UniformDistribution, LogisticDistribution, CauchyDistribution, \
     ChiSquaredDistribution
 from src.weekly.weekly_test_2 import LaplaceDistribution
 

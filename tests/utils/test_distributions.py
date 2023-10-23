@@ -1,6 +1,6 @@
 import pytest
-from pytest import fixture, approx
-from src.utils import distributions as dst
+from pytest import approx
+from src.weekly import distributions as dst
 import random
 
 

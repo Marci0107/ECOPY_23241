@@ -123,7 +123,9 @@ class CauchyDistribution:
         return self.loc + self.scale*math.tan(parentheses)
 
     def gen_random(self):
-        return random.standard_cauchy()*self.scale + self.loc
+        u = random.random()
+        parentheses = math.pi * (u - 0.5)
+        return self.loc + self.scale * math.tan(parentheses)
 
     def mean(self):
         raise Exception("Moments undefined")

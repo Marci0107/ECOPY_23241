@@ -1,6 +1,4 @@
-from pathlib import Path
 import pandas as pd
-import matplotlib.pyplot as plt
 import random
 
 food = pd.read_csv("C:/Users/User\Documents\GitHub\ECOPY_23241\data\chipotle.tsv", delimiter='\t')
@@ -67,3 +65,104 @@ def average_price_in_quartiles(input_df):
     new_df = input_df.copy()
     avg_price_df = new_df.groupby('Quartile')['item_price'].mean().reset_index(drop=True)
     return avg_price_df
+
+def minmaxmean_price_in_quartile(input_df):
+    new_df = input_df.copy()
+    result = new_df.groupby('Quartile')['item_price'].agg(['min', 'max', 'mean']).reset_index(drop=True)
+    result.columns = ['min', 'max', 'mean']
+    return result
+
+def gen_uniform_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
+    for _ in range(number_of_trajectories):
+        random.seed(42)
+        trajectories = []
+
+        for _ in range(number_of_trajectories):
+            trajectory = []
+            cumulative_sum = 0.0
+
+            for _ in range(length_of_trajectory):
+                random_value = distribution.gen_random()
+                cumulative_sum += random_value
+                cumulative_average = cumulative_sum / (len(trajectory) + 1)  # Számoljuk a kumulatív átlagot
+                trajectory.append(cumulative_average)  # Hozzáadjuk a kumulatív átlagot a belső listához
+
+            trajectories.append(trajectory)  # Hozzáadjuk a belső listát az eredmény listához
+
+        return trajectories
+
+def gen_logistic_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
+    for _ in range(number_of_trajectories):
+        random.seed(42)
+        trajectories = []
+
+        for _ in range(number_of_trajectories):
+            trajectory = []
+            cumulative_sum = 0.0
+
+            for _ in range(length_of_trajectory):
+                random_value = distribution.gen_rand()
+                cumulative_sum += random_value
+                cumulative_average = cumulative_sum / (len(trajectory) + 1)  # Számoljuk a kumulatív átlagot
+                trajectory.append(cumulative_average)  # Hozzáadjuk a kumulatív átlagot a belső listához
+
+            trajectories.append(trajectory)  # Hozzáadjuk a belső listát az eredmény listához
+
+        return trajectories
+
+def gen_laplace_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
+    for _ in range(number_of_trajectories):
+        random.seed(42)
+        trajectories = []
+
+        for _ in range(number_of_trajectories):
+            trajectory = []
+            cumulative_sum = 0.0
+
+            for _ in range(length_of_trajectory):
+                random_value = distribution.gen_rand()
+                cumulative_sum += random_value
+                cumulative_average = cumulative_sum / (len(trajectory) + 1)  # Számoljuk a kumulatív átlagot
+                trajectory.append(cumulative_average)  # Hozzáadjuk a kumulatív átlagot a belső listához
+
+            trajectories.append(trajectory)  # Hozzáadjuk a belső listát az eredmény listához
+
+        return trajectories
+
+def gen_cauchy_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
+    for _ in range(number_of_trajectories):
+        random.seed(42)
+        trajectories = []
+
+        for _ in range(number_of_trajectories):
+            trajectory = []
+            cumulative_sum = 0.0
+
+            for _ in range(length_of_trajectory):
+                random_value = distribution.gen_random()
+                cumulative_sum += random_value
+                cumulative_average = cumulative_sum / (len(trajectory) + 1)  # Számoljuk a kumulatív átlagot
+                trajectory.append(cumulative_average)  # Hozzáadjuk a kumulatív átlagot a belső listához
+
+            trajectories.append(trajectory)  # Hozzáadjuk a belső listát az eredmény listához
+
+        return trajectories
+
+def gen_chi2_mean_trajectories(distribution, number_of_trajectories, length_of_trajectory):
+    for _ in range(number_of_trajectories):
+        random.seed(42)
+        trajectories = []
+
+        for _ in range(number_of_trajectories):
+            trajectory = []
+            cumulative_sum = 0.0
+
+            for _ in range(length_of_trajectory):
+                random_value = distribution.gen_rand()
+                cumulative_sum += random_value
+                cumulative_average = cumulative_sum / (len(trajectory) + 1)  # Számoljuk a kumulatív átlagot
+                trajectory.append(cumulative_average)  # Hozzáadjuk a kumulatív átlagot a belső listához
+
+            trajectories.append(trajectory)  # Hozzáadjuk a belső listát az eredmény listához
+
+        return trajectories
