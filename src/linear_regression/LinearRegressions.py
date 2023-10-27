@@ -1,4 +1,3 @@
-from statsmodels.formula.api import ols
 import statsmodels.api as sm
 class LinearRegressionSM():
 
@@ -24,12 +23,12 @@ class LinearRegressionSM():
 
     def get_wald_test_result(self, restr_matrix):
         wald_test = self._model.wald_test(restr_matrix)
-        fvalue = round(wald_test.statistic, 3)
-        pvalue = round(wald_test.pvalue, 3)
+        fvalue = wald_test.statistic[0, 0]
+        pvalue = wald_test.pvalue
         return f"F-value: {fvalue:.3}, p-value: {pvalue:.3}"
 
     def get_model_goodness_values(self):
-        ars = round(self._model.rsquared_adj, 3)
-        ak = round(self._model.aic, 3)
-        by = round(self._model.bic, 3)
+        ars = self._model.rsquared_adj
+        ak = self._model.aic
+        by = self._model.bic
         return f"Adjusted R-squared: {ars:.3}, Akaike IC: {ak:.3}, Bayes IC: {by:.3}"
