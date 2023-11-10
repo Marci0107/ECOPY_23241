@@ -60,23 +60,25 @@ class LinearRegressionNP():
         return beta_coeffs
 
     def get_pvalues(self):
-        X = np.column_stack((np.ones(len(self.right_hand_side)), self.right_hand_side))
-        y = self.left_hand_side.values
-        residuals = y - X.dot(np.array([self.alpha] + list(self.beta)))
+        n = len(self.left_hand_side)
 
-        dof = len(X) - len(self.beta)
-        t_stats = self.beta / np.sqrt(np.diagonal(np.linalg.inv(X.T.dot(X)) * np.var(residuals)))
-        p_values = 2 * (1 - stats.t.cdf(np.abs(t_stats), df=dof))
+        # Calculate standard errors of coefficients
+        X = np.column_stack((np.ones(n), self.right_hand_side))
+        y_hat = X.dot(np.concatenate(([self.alpha], self.beta)))
+        residuals = self.left_hand_side - y_hat
+        residual_std = np.std(residuals, ddof=1)
+        se = np.sqrt(np.linalg.inv(X.T.dot(X)) * residual_std**2)
 
-        p_values = pd.Series(p_values, name="P-values for the corresponding coefficients")
+        # Calculate t-statistics
+        t_stats = self.beta / se
+
+        # Calculate p-values
+        p_values = pd.Series([min(value, 1 - value) * 2 for value in t_stats], name="P-values for the corresponding coefficients")
         return p_values
     def get_wald_test_result(self, R):
         X = np.column_stack((np.ones(len(self.right_hand_side)), self.right_hand_side))
-        y = self.left_hand_side.values
-        residuals = y - X.dot(np.array([self.alpha] + list(self.beta)))
 
         dof = len(X) - len(self.beta) - 1
-        t_stats = self.beta / np.sqrt(np.diagonal(np.linalg.inv(X.T.dot(X)) * np.var(residuals) / dof))
 
         wald_value = (R.dot(self.beta) / (R.dot(np.linalg.inv(X.T.dot(X)).dot(R.T))))[0]
         p_value = 1 - stats.f.cdf(wald_value, R.shape[0], dof)
