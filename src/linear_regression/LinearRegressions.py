@@ -60,44 +60,48 @@ class LinearRegressionNP():
         return beta_coeffs
 
     def get_pvalues(self):
-        n = len(self.left_hand_side)
-
-        # Calculate standard errors of coefficients
-        X = np.column_stack((np.ones(n), self.right_hand_side))
-        y_hat = X.dot(np.concatenate(([self.alpha], self.beta)))
-        residuals = self.left_hand_side - y_hat
-        residual_std = np.std(residuals, ddof=1)
-        se = np.sqrt(np.linalg.inv(X.T.dot(X)) * residual_std**2)
-
-        # Calculate t-statistics
-        t_stats = self.beta / se
-
-        # Calculate p-values
-        p_values = pd.Series([min(value, 1 - value) * 2 for value in t_stats], name="P-values for the corresponding coefficients")
-        return p_values
-    def get_wald_test_result(self, R):
+        # Calculate standard errors of the coefficients
         X = np.column_stack((np.ones(len(self.right_hand_side)), self.right_hand_side))
-
-        dof = len(X) - len(self.beta) - 1
-
-        wald_value = (R.dot(self.beta) / (R.dot(np.linalg.inv(X.T.dot(X)).dot(R.T))))[0]
-        p_value = 1 - stats.f.cdf(wald_value, R.shape[0], dof)
-
-        result = f"Wald: {wald_value:.3f}, p-value: {p_value:.3f}"
-        return result
+        y = self.left_hand_side.values
+        n, k = X.shape
+        df = n - k  # degrees of freedom
+        # Residuals
+        residuals = y - X.dot(np.concatenate(([self.alpha], self.beta)))
+        # Standard deviation of the residuals
+        sigma = np.sqrt((residuals.dot(residuals)) / df)
+        # Standard errors of coefficients
+        se = np.sqrt(np.diagonal(sigma**2 * np.linalg.inv(X.T.dot(X))))
+        # t-statistics
+        t_stats = np.concatenate(([self.alpha / se[0]], self.beta / se[1:]))
+        # Calculate p-values
+        p_values = pd.Series([2 * (1 - stats.t.cdf(np.abs(t), df)) for t in t_stats], name="P-values for the corresponding coefficients")
+        self.p_values = p_values
+        return p_values
+    def get_wald_test_result(self, restriction_matrix):
+        # Calculate the Wald test statistic
+        wald_value = ((np.array(restriction_matrix).dot(np.concatenate(([self.alpha], self.beta)))) ** 2).sum()
+        # Degrees of freedom for the numerator
+        df_num = np.array(restriction_matrix).shape[0]
+        # Degrees of freedom for the denominator
+        df_denom = len(self.right_hand_side) - len(restriction_matrix)
+        # Calculate p-value
+        p_value = 1 - stats.f.cdf(wald_value, df_num, df_denom)
+        # Format the result as a string
+        result_string = f"Wald: {wald_value:.3f}, p-value: {p_value:.3f}"
+        return result_string
 
     def get_model_goodness_values(self):
         X = np.column_stack((np.ones(len(self.right_hand_side)), self.right_hand_side))
         y = self.left_hand_side.values
-        residuals = y - X.dot(np.array([self.alpha] + list(self.beta)))
-
+        n, k = X.shape
+        df_residuals = n - k  # degrees of freedom for residuals
+        df_total = n - 1  # total degrees of freedom
+        # Calculate centered R-squared
         y_mean = np.mean(y)
-        centered_sum_of_squares = np.sum((y - y_mean) ** 2)
-        sum_of_squares_residuals = np.sum(residuals ** 2)
-
-        centered_r_squared = 1 - sum_of_squares_residuals / centered_sum_of_squares
-        dof = len(X) - len(self.beta)
-        adjusted_r_squared = 1 - (1 - centered_r_squared) * (len(X) - 1) / dof
-
-        result = f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
-        return result
+        y_pred = X.dot(np.concatenate(([self.alpha], self.beta)))
+        ss_residuals = np.sum((y - y_pred) ** 2)
+        ss_total = np.sum((y - y_mean) ** 2)
+        centered_r_squared = 1 - (ss_residuals / ss_total)
+        # Calculate adjusted R-squared
+        adjusted_r_squared = 1 - (ss_residuals / df_residuals) / (ss_total / df_total)
+        return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
