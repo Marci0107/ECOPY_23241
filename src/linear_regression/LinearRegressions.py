@@ -105,3 +105,33 @@ class LinearRegressionNP():
         # Calculate adjusted R-squared
         adjusted_r_squared = 1 - (ss_residuals / df_residuals) / (ss_total / df_total)
         return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
+
+class LinearRegressionGLS():
+    def __init__(self, df1, df2):
+        self.left_hand_side = df1
+        self.right_hand_side = df2
+        self.beta = None  # Coefficients
+        self.pvalues = None  # P-values for coefficients
+
+    def fit(self):
+        X = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
+        y = np.array(self.left_hand_side)
+        # Step 1: OLS estimation without using numpy.linalg.lstsq()
+        XTX_inv = np.linalg.inv(X.T @ X)
+        self.beta = XTX_inv @ X.T @ y
+        # Step 2: Compute residuals
+        residuals = y - X @ self.beta
+        # Step 3: Square residuals
+        squared_residuals = residuals ** 2
+        # Step 4: Build a new model with squared residuals as the dependent variable
+        X_new = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
+        # Step 5: GLS estimation using the new model
+        XTX_inv_new = np.linalg.inv(X_new.T @ X_new)
+        self.beta = XTX_inv_new @ X_new.T @ np.log(squared_residuals)
+        # Step 6: Construct the V inverse matrix
+        V_inv = np.diag(1 / np.sqrt(np.exp(X_new @ self.beta)))
+        # Step 7: GLS estimation using the V inverse matrix
+        self.beta = np.linalg.inv(X.T @ V_inv @ X) @ X.T @ V_inv @ y
+
+    def get_params(self):
+        return pd.Series(self.beta, name="Beta coefficients")
