@@ -110,28 +110,72 @@ class LinearRegressionGLS():
     def __init__(self, df1, df2):
         self.left_hand_side = df1
         self.right_hand_side = df2
+        self.V_inv = None # V^(-1)
         self.beta = None  # Coefficients
-        self.pvalues = None  # P-values for coefficients
+        self.std_errors = None  # Standard errors
 
     def fit(self):
         X = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
         y = np.array(self.left_hand_side)
-        # Step 1: OLS estimation without using numpy.linalg.lstsq()
+        # Step 1: OLS estimation
         XTX_inv = np.linalg.inv(X.T @ X)
-        self.beta = XTX_inv @ X.T @ y
+        beta1 = XTX_inv @ X.T @ y
         # Step 2: Compute residuals
-        residuals = y - X @ self.beta
+        residuals = y - X @ beta1
         # Step 3: Square residuals
         squared_residuals = residuals ** 2
-        # Step 4: Build a new model with squared residuals as the dependent variable
-        X_new = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
-        # Step 5: GLS estimation using the new model
-        XTX_inv_new = np.linalg.inv(X_new.T @ X_new)
-        self.beta = XTX_inv_new @ X_new.T @ np.log(squared_residuals)
-        # Step 6: Construct the V inverse matrix
-        V_inv = np.diag(1 / np.sqrt(np.exp(X_new @ self.beta)))
-        # Step 7: GLS estimation using the V inverse matrix
-        self.beta = np.linalg.inv(X.T @ V_inv @ X) @ X.T @ V_inv @ y
+        # Step 4: GLS estimation using the new model
+        beta2 = XTX_inv @ X.T @ np.log(squared_residuals)
+        # Step 5: Construct the V inverse matrix
+        self.V_inv = np.diag(1 / np.sqrt(np.exp(X @ beta2)))
+        # Step 6: GLS estimation using the V inverse matrix
+        self.beta = np.linalg.inv(X.T @ self.V_inv @ X) @ X.T @ self.V_inv @ y
 
     def get_params(self):
         return pd.Series(self.beta, name="Beta coefficients")
+
+    def get_pvalues(self):
+        X = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
+        y = np.array(self.left_hand_side)
+        xTx = X.T @ self.V_inv @ X
+        xTx_inv = np.linalg.inv(xTx)
+        # Calculate standard errors
+        residuals = y - X @ self.beta
+        n, k = X.shape
+        df = n - k  # degrees of freedom
+        variance = residuals.T @ residuals / df
+        self.std_errors = np.sqrt(np.diag(xTx_inv) * variance)
+        t_stat = self.beta / self.std_errors
+        # Calculate p-values
+        term = np.minimum(stats.t.cdf(t_stat, df), 1 - stats.t.cdf(t_stat, df))
+        p_values = (term) * 2
+        return pd.Series(p_values, name='P-values for the corresponding coefficients')
+
+    def get_wald_test_result(self, restriction_matrix):
+        X = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
+        y = np.array(self.left_hand_side)
+        xTx = X.T @ self.V_inv @ X
+        xTx_inv = np.linalg.inv(xTx)
+        n, k = X.shape
+        df = n - k  # degrees of freedom
+        residuals = y - X @ self.beta
+        variance = residuals.T @ residuals / df
+        # Calculate Wald statistics
+        term1 = restriction_matrix @ self.beta
+        term2 = np.linalg.inv(restriction_matrix @ xTx_inv @ np.array(restriction_matrix).T)
+        f_stat = (term1.T @ term2 @ term1 / len(restriction_matrix)) / variance
+        p_value = 1 - stats.f.cdf(f_stat, len(restriction_matrix), df)
+        return f'Wald: {f_stat:.3f}, p-value: {p_value:.3f}'
+
+    def get_model_goodness_values(self):
+        y = np.array(self.left_hand_side)
+        X = np.column_stack((np.ones(len(self.right_hand_side)), np.array(self.right_hand_side)))
+        SSR = y.T @ self.V_inv @ X @ np.linalg.inv(X.T @ self.V_inv @ X) @ X.T @ self.V_inv @ y
+        SST = y.T @ self.V_inv @ y
+        #Calculate R-squared:
+        centered_r_squared = 1 - SSR / SST
+        n = len(y)
+        p = X.shape[1] - 1
+        # Calculate Adjusted R-squared:
+        adjusted_r_squared = 1 - (SSR / (n - p - 1)) / (SST / (n - 1))
+        return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
