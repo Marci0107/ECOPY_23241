@@ -2,6 +2,7 @@ import statsmodels.api as sm
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
+from scipy.optimize import minimize
 class LinearRegressionSM():
 
     def __init__(self, df1, df2):
@@ -179,3 +180,61 @@ class LinearRegressionGLS():
         # Calculate Adjusted R-squared:
         adjusted_r_squared = 1 - (SSR / (n - p - 1)) / (SST / (n - 1))
         return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
+
+class LinearRegressionML():
+
+    def __init__(self, df1, df2):
+        self.left_hand_side = df1
+        self.right_hand_side = df2
+        self.coefficients = None
+        self.p_values = None
+        self.centered_r_squared = None
+        self.adjusted_r_squared = None
+
+    def _negative_log_likelihood(self, params):
+        # Az illesztett modell log-likelihood-ja
+        beta_0 = params[0]
+        beta = params[1:]
+
+        predicted_values = beta_0 + np.dot(self.right_hand_side, beta)
+        residuals = self.left_hand_side - predicted_values
+        sigma_squared = np.var(residuals)
+        log_likelihood = -0.5 * np.sum(np.log(2 * np.pi * sigma_squared) + (residuals ** 2) / sigma_squared)
+
+        return -log_likelihood
+
+    def fit(self):
+        # Kezdeti paraméterek beállítása
+        initial_params = np.zeros(self.right_hand_side.shape[1] + 1)
+        # Maximum Likelihood becslés numerikus optimalizációval
+        result = minimize(self._negative_log_likelihood, initial_params, method='BFGS')
+        # Az optimalizált paraméterek kinyerése
+        self.coefficients = result.x
+        # p-értékek kiszámítása
+        residuals = self.left_hand_side - (self.coefficients[0] + np.dot(self.right_hand_side, self.coefficients[1:]))
+        variance = np.var(residuals, ddof=len(self.coefficients))
+        covariance_matrix = variance * np.linalg.inv(np.dot(self.right_hand_side.T, self.right_hand_side))
+        standard_errors = np.sqrt(np.diag(covariance_matrix))
+        t_statistics = self.coefficients / np.concatenate(([np.nan], standard_errors))
+        degrees_of_freedom = len(self.left_hand_side) - len(self.coefficients)
+        self.p_values = pd.Series([2 * (1 - stats.t.cdf(np.abs(t_stat), df=degrees_of_freedom)) for t_stat in t_statistics],
+                                  index=['Intercept'] + [f'Beta {i}' for i in range(1, len(self.coefficients))],
+                                  name='P-values for the corresponding coefficients')
+
+        # Centered R-squared számítása
+        self.centered_r_squared = 1 - (np.sum(residuals ** 2) / np.sum((self.left_hand_side - np.mean(self.left_hand_side)) ** 2))
+        # Adjusted R-squared számítása
+        n = len(self.left_hand_side)
+        k = len(self.coefficients)
+        self.adjusted_r_squared = 1 - ((n - 1) / (n - k)) * (1 - self.centered_r_squared)
+
+    def get_params(self):
+        beta_names = ['Beta 0'] + [f'Beta {i + 1}' for i in range(len(self.coefficients) - 1)]
+        beta_values = np.insert(self.coefficients[1:], 0, self.coefficients[0])
+        return pd.Series(beta_values, index=beta_names, name='Beta coefficients')
+
+    def get_pvalues(self):
+        return self.p_values
+
+    def get_model_goodness_values(self):
+            return f"Centered R-squared: {self.centered_r_squared:.3f}, Adjusted R-squared: {self.adjusted_r_squared:.3f}"
