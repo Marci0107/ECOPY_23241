@@ -187,7 +187,6 @@ class LinearRegressionML():
         self.left_hand_side = df1
         self.right_hand_side = df2
         self.coefficients = None
-        self.p_values = None
         self.centered_r_squared = None
         self.adjusted_r_squared = None
 
@@ -205,23 +204,14 @@ class LinearRegressionML():
 
     def fit(self):
         # Kezdeti paraméterek beállítása
-        initial_params = np.zeros(self.right_hand_side.shape[1] + 1)
+        initial_params = 0.1 * np.zeros(self.right_hand_side.shape[1] + 1)
         # Maximum Likelihood becslés numerikus optimalizációval
         result = minimize(self._negative_log_likelihood, initial_params, method='BFGS')
         # Az optimalizált paraméterek kinyerése
         self.coefficients = result.x
-        # p-értékek kiszámítása
-        residuals = self.left_hand_side - (self.coefficients[0] + np.dot(self.right_hand_side, self.coefficients[1:]))
-        variance = np.var(residuals, ddof=len(self.coefficients))
-        covariance_matrix = variance * np.linalg.inv(np.dot(self.right_hand_side.T, self.right_hand_side))
-        standard_errors = np.sqrt(np.diag(covariance_matrix))
-        t_statistics = self.coefficients / np.concatenate(([np.nan], standard_errors))
-        degrees_of_freedom = len(self.left_hand_side) - len(self.coefficients)
-        self.p_values = pd.Series([2 * (1 - stats.t.cdf(np.abs(t_stat), df=degrees_of_freedom)) for t_stat in t_statistics],
-                                  index=['Intercept'] + [f'Beta {i}' for i in range(1, len(self.coefficients))],
-                                  name='P-values for the corresponding coefficients')
 
         # Centered R-squared számítása
+        residuals = self.left_hand_side - (self.coefficients[0] + np.dot(self.right_hand_side, self.coefficients[1:]))
         self.centered_r_squared = 1 - (np.sum(residuals ** 2) / np.sum((self.left_hand_side - np.mean(self.left_hand_side)) ** 2))
         # Adjusted R-squared számítása
         n = len(self.left_hand_side)
@@ -234,7 +224,23 @@ class LinearRegressionML():
         return pd.Series(beta_values, index=beta_names, name='Beta coefficients')
 
     def get_pvalues(self):
-        return self.p_values
+        initial_params = 0.1 * np.zeros(self.right_hand_side.shape[1] + 1)
+        result = minimize(self._negative_log_likelihood, initial_params, method='BFGS')
+        self.coefficients = result.x
+        # Standard errors calculation using the inverse of the square root of the diagonal elements
+        std_errors = np.sqrt(np.abs(np.diag(result.hess_inv)))
+        # t-statistics calculation
+        t_statistics = self.coefficients / std_errors
+        # Degrees of freedom (df)
+        df = len(self.left_hand_side) - len(self.right_hand_side.columns)
+        # p-values calculation with correction for MLE variance bias
+        correction_factor = len(self.left_hand_side) / (len(self.left_hand_side) - len(self.right_hand_side.columns))
+        term = np.minimum(stats.t.cdf(t_statistics, df=df), 1 - stats.t.cdf(t_statistics, df=df))
+        p_values = term * 2 * correction_factor
+        # Column names creation
+        column_names = [f'P-value for {beta_name}' for beta_name in ['Beta 0'] + [f'Beta {i + 1}' for i in range(len(self.coefficients) - 1)]]
+        # Create a pandas Series and return it
+        return pd.Series(p_values, index=column_names, name='P-values for the corresponding coefficients')
 
     def get_model_goodness_values(self):
             return f"Centered R-squared: {self.centered_r_squared:.3f}, Adjusted R-squared: {self.adjusted_r_squared:.3f}"
