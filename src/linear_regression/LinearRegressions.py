@@ -107,6 +107,52 @@ class LinearRegressionNP():
         adjusted_r_squared = 1 - (ss_residuals / df_residuals) / (ss_total / df_total)
         return f"Centered R-squared: {centered_r_squared:.3f}, Adjusted R-squared: {adjusted_r_squared:.3f}"
 
+    def get_paired_se_and_percentile_ci(self, number_of_bootstrap_samples, alpha, random_seed):
+        np.random.seed(random_seed)
+        bootstrap_samples = []
+        for _ in range(number_of_bootstrap_samples):
+            # Bootstrap sample
+            indices = np.random.choice(len(self.right_hand_side), len(self.right_hand_side), replace=True)
+            X_bootstrap = np.column_stack((np.ones(len(indices)), self.right_hand_side.iloc[indices]))
+            y_bootstrap = self.left_hand_side.iloc[indices].values
+            # Fit the model on the bootstrap sample
+            beta_bootstrap = np.linalg.inv(X_bootstrap.T.dot(X_bootstrap)).dot(X_bootstrap.T).dot(y_bootstrap)
+            alpha_bootstrap = beta_bootstrap[0]
+            beta_bootstrap = beta_bootstrap[1:]
+            bootstrap_samples.append(beta_bootstrap)
+        # Calculate standard errors
+        se_bootstrap = np.std(bootstrap_samples, axis=0, ddof=1)
+        # Calculate percentile confidence intervals
+        lower_bound = np.percentile(bootstrap_samples, (alpha / 2) * 100, axis=0)
+        upper_bound = np.percentile(bootstrap_samples, (1 - alpha / 2) * 100, axis=0)
+        # Format the result as a string
+        result_string = f"Paired Bootstraped SE: {se_bootstrap[0]:.3f}, CI: [{lower_bound[0]:.3f}, {upper_bound[0]:.3f}]"
+        return result_string
+
+    def get_wild_se_and_normal_ci(self, number_of_bootstrap_samples, alpha, random_seed):
+        np.random.seed(random_seed)
+        bootstrap_samples = []
+        for _ in range(number_of_bootstrap_samples):
+            # Generate a wild bootstrap sample
+            residuals = self.left_hand_side - self.right_hand_side.dot(self.beta) - self.alpha
+            wild_bootstrap_residuals = residuals * np.random.choice([-1, 1], size=len(residuals), replace=True)
+            y_bootstrap = self.right_hand_side * self.beta + self.alpha + wild_bootstrap_residuals
+            X_bootstrap = np.column_stack((np.ones(len(self.right_hand_side)), y_bootstrap))
+            # Fit the model on the bootstrap sample
+            beta_bootstrap = np.linalg.inv(X_bootstrap.T.dot(X_bootstrap)).dot(X_bootstrap.T).dot(y_bootstrap)
+            alpha_bootstrap = beta_bootstrap[0]
+            beta_bootstrap = beta_bootstrap[1:]
+            bootstrap_samples.append(beta_bootstrap)
+        # Calculate standard errors
+        se_bootstrap = np.std(bootstrap_samples, axis=0, ddof=1)
+        # Calculate normal distribution-based confidence intervals
+        z_critical = stats.norm.ppf(1 - alpha / 2)
+        lower_bound_normal = self.beta[0] - z_critical * se_bootstrap
+        upper_bound_normal = self.beta[0] + z_critical * se_bootstrap
+        # Format the result as a string
+        result_string = f"Wild Bootstraped SE: {se_bootstrap[0]:.3f}, CI: [{lower_bound_normal[0]:.3f}, {upper_bound_normal[0]:.3f}]"
+        return result_string
+
 class LinearRegressionGLS():
     def __init__(self, df1, df2):
         self.left_hand_side = df1
